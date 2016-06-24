@@ -1,0 +1,13 @@
+elasticsearch:
+  build: ./elasticsearch
+  ports:
+    - "9200:9200"
+    - "9300:9300"
+
+nginx:
+  build: ./nginx
+  links:
+    - elasticsearch
+  ports:
+    - "80:80"
+    - "443:443"
