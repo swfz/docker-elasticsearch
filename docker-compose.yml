@@ -1,13 +1,70 @@
-elasticsearch:
-  build: ./elasticsearch
-  ports:
-    - "9200:9200"
-    - "9300:9300"
+version: '3'
+services:
+  es01:
+    build: ./elasticsearch
+    container_name: es01
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+  es02:
+    build: ./elasticsearch
+    container_name: es02
+    environment:
+      - node.name=es02
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.0.1
+    volumes:
+      - ./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    networks:
+      - esnet
+    links:
+      - es01
+      - es02
+  nginx:
+    build: ./nginx
+    networks:
+      - esnet
+    links:
+      - es01
+      - es02
+    ports:
+      - "80:80"
+      - "443:443"
+volumes:
+  esdata01:
+    driver: local
+  esdata02:
+    driver: local
 
-nginx:
-  build: ./nginx
-  links:
-    - elasticsearch
-  ports:
-    - "80:80"
-    - "443:443"
+networks:
+  esnet:
